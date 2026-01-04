@@ -13,18 +13,22 @@ import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { useApp } from "@/context/app-context"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { api } from "@/lib/api"
 
-const categories = [
-  { name: "Grocery", icon: GroceryIcon },
-  { name: "Pharmacy", icon: PharmacyIcon },
-  { name: "Vegetable Vendors", icon: VeggiesIcon },
-  { name: "Water Refillers", icon: WaterIcon },
-  { name: "Construction Supplies", icon: ConstructionIcon },
-  { name: "Local Businesses", icon: LocalBusinessIcon },
-]
+// Icon mapping for categories
+const iconMap: Record<string, any> = {
+  "grocery": GroceryIcon,
+  "pharmacy": PharmacyIcon,
+  "vegetables": VeggiesIcon,
+  "water-refillers": WaterIcon,
+  "construction": ConstructionIcon,
+  "local": LocalBusinessIcon,
+}
 
 export default function CategoriesPage() {
+  const [categories, setCategories] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const { selectedLocation, setSelectedCategory } = useApp()
   const router = useRouter()
 
@@ -33,6 +37,33 @@ export default function CategoriesPage() {
       router.push("/")
     }
   }, [selectedLocation, router])
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true)
+        const response = await api.getCategories()
+        if (response.success && response.data) {
+          setCategories(response.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error)
+        // Fallback to mock data
+        setCategories([
+          { id: "1", name: "Grocery", slug: "grocery" },
+          { id: "2", name: "Pharmacy", slug: "pharmacy" },
+          { id: "3", name: "Vegetables", slug: "vegetables" },
+          { id: "4", name: "Water Refillers", slug: "water-refillers" },
+          { id: "5", name: "Construction Supplies", slug: "construction" },
+          { id: "6", name: "Local Businesses", slug: "local" }
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName)
@@ -67,23 +98,36 @@ export default function CategoriesPage() {
         <p className="text-muted-foreground mb-6">in {selectedLocation.name}</p>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {categories.map((category) => {
-            const IconComponent = category.icon
-            return (
-              <button
-                key={category.name}
-                onClick={() => handleCategoryClick(category.name)}
-                className="flex flex-col items-center justify-center p-6 bg-muted rounded-2xl hover:bg-accent transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 group"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/15 transition-colors">
-                  <IconComponent className="w-10 h-10" />
+        {loading ? (
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="flex flex-col items-center justify-center p-6 bg-muted rounded-2xl">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-200 mb-3" />
+                  <div className="h-4 bg-gray-200 rounded w-20" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center leading-tight">{category.name}</span>
-              </button>
-            )
-          })}
-        </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {categories.map((category: any) => {
+              const IconComponent = iconMap[category.slug] || GroceryIcon
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryClick(category.name)}
+                  className="flex flex-col items-center justify-center p-6 bg-muted rounded-2xl hover:bg-accent transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 group"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/15 transition-colors">
+                    <IconComponent className="w-10 h-10" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground text-center leading-tight">{category.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Footer */}

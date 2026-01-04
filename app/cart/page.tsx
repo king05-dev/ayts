@@ -15,18 +15,30 @@ import {
   ShoppingBag,
   ChevronRight,
   CheckCircle2,
+  Clock,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useApp } from "@/context/app-context"
 import { useRouter } from "next/navigation"
+import { api, Cart, CartItem, Store } from "@/lib/api"
+// Simple Badge component inline
+const Badge = ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
+  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${className}`}>
+    {children}
+  </span>
+)
 
 export default function CartPage() {
-  const { selectedLocation, cartItems, updateCartQuantity, removeFromCart, clearCart, getCartTotal } = useApp()
+  const { selectedLocation, cartItems, updateCartQuantity, getCartTotal, getCartItemCount, clearCart } = useApp()
   const router = useRouter()
 
   const [isCheckout, setIsCheckout] = useState(false)
   const [isOrderPlaced, setIsOrderPlaced] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [updating, setUpdating] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState("cod")
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -34,24 +46,103 @@ export default function CartPage() {
     notes: "",
   })
 
-  useEffect(() => {
-    if (!selectedLocation) {
-      router.push("/")
+  // Get user's current location
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+        },
+        (error) => {
+          console.error('Error getting location:', error)
+        }
+      )
     }
-  }, [selectedLocation, router])
+  }
 
-  const subtotal = getCartTotal()
-  const deliveryFee = cartItems.length > 0 ? 25 : 0
-  const total = subtotal + deliveryFee
+  useEffect(() => {
+    getUserLocation()
+  }, [])
+
+  // Group cart items by store
+  const groupedCartItems = cartItems.reduce((acc, item) => {
+    if (!acc[item.storeId]) {
+      acc[item.storeId] = {
+        storeId: item.storeId,
+        storeName: item.storeName,
+        items: []
+      }
+    }
+    acc[item.storeId].items.push(item)
+    return acc
+  }, {} as Record<string, { storeId: string, storeName: string, items: typeof cartItems }>)
+
+  const stores = Object.values(groupedCartItems)
+  const totalItems = getCartItemCount()
+  const totalPrice = getCartTotal()
+
+  // Remove location check and API fetching since we're using app context
+  // useEffect(() => {
+  //   if (!selectedLocation) {
+  //     router.push("/")
+  //   }
+  // }, [selectedLocation, router])
+
+  const handleUpdateQuantity = (itemId: string | number, change: number) => {
+    const item = cartItems.find(item => item.id === itemId)
+    if (!item) return
+    
+    updateCartQuantity(itemId, change)
+  }
+
+  const handleRemoveItem = (itemId: string | number) => {
+    const item = cartItems.find(item => item.id === itemId)
+    if (!item) return
+    
+    updateCartQuantity(itemId, -item.quantity)
+  }
+
+  const handleClearCart = () => {
+    clearCart()
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const createOrder = async () => {
+    if (stores.length === 0) return
+
+    try {
+      setLoading(true)
+      const response = await api.createOrder({
+        storeId: stores[0].storeId,
+        deliveryAddress: formData.address,
+        deliveryInstructions: formData.notes,
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        customerEmail: '',
+        orderNotes: formData.notes,
+        paymentMethod: 'cash_on_delivery',
+      })
+
+      if (response.success && response.data) {
+        setIsOrderPlaced(true)
+      }
+    } catch (error) {
+      console.error('Failed to create order:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handlePlaceOrder = () => {
     if (formData.name && formData.phone && formData.address) {
-      setIsOrderPlaced(true)
+      createOrder()
     }
   }
 
@@ -64,12 +155,8 @@ export default function CartPage() {
 
   const isFormValid = formData.name && formData.phone && formData.address
 
-  // Get unique store name from cart items
-  const storeName = cartItems.length > 0 ? cartItems[0].storeName : ""
-
-  if (!selectedLocation) {
-    return null
-  }
+  // Get store name from first cart item
+  const storeName = stores.length > 0 ? stores[0].storeName : ""
 
   // Order Placed Success Screen
   if (isOrderPlaced) {
@@ -85,7 +172,7 @@ export default function CartPage() {
         <div className="bg-muted/50 rounded-2xl p-5 w-full max-w-sm mb-8">
           <div className="flex items-center justify-between mb-3">
             <span className="text-muted-foreground text-sm">Order Total</span>
-            <span className="font-extrabold text-primary text-xl">₱{total}</span>
+            <span className="font-extrabold text-primary text-xl">₱{totalPrice + 50}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-sm">Delivery To</span>
@@ -132,7 +219,7 @@ export default function CartPage() {
               <div>
                 <p className="font-bold text-foreground">Order Summary</p>
                 <p className="text-sm text-muted-foreground">
-                  {cartItems.length} items · ₱{total}
+                  {totalItems} items · ₱{totalPrice + 50}
                 </p>
               </div>
             </div>
@@ -141,7 +228,7 @@ export default function CartPage() {
                 <div key={item.id} className="w-12 h-12 rounded-xl overflow-hidden bg-muted">
                   <Image
                     src={item.image || "/placeholder.svg"}
-                    alt={item.name}
+                    alt={item.name || "Product"}
                     width={48}
                     height={48}
                     className="w-full h-full object-cover"
@@ -232,16 +319,16 @@ export default function CartPage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-semibold text-foreground">₱{subtotal}</span>
+                <span className="font-semibold text-foreground">₱{totalPrice}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Delivery Fee</span>
-                <span className="font-semibold text-foreground">₱{deliveryFee}</span>
+                <span className="font-semibold text-foreground">₱50.00</span>
               </div>
               <div className="h-px bg-border my-1" />
               <div className="flex items-center justify-between">
                 <span className="font-bold text-foreground">Total</span>
-                <span className="text-xl font-extrabold text-primary">₱{total}</span>
+                <span className="text-xl font-extrabold text-primary">₱{totalPrice + 50}</span>
               </div>
             </div>
           </div>
@@ -259,7 +346,7 @@ export default function CartPage() {
             }`}
           >
             <span>Place Order</span>
-            <span className="font-extrabold">· ₱{total}</span>
+            <span className="font-extrabold">· ₱{totalPrice + 50}</span>
           </button>
         </div>
       </main>
@@ -273,7 +360,9 @@ export default function CartPage() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="px-4 py-4 flex items-center justify-between">
           <Link
-            href="/store/1"
+
+           
+          href={stores.length > 0 ? `/stores/${stores[0].storeId}` : "/stores"}
             className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
@@ -303,115 +392,142 @@ export default function CartPage() {
         </div>
       ) : (
         <>
-          {/* Store Info */}
+          {/* Cart Items by Store */}
+          {stores.map((store) => (
+            <div key={store.storeId} className="px-4 py-4">
+              <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+                <Link href={`/stores/${store.storeId}`} className="flex items-center gap-3 mb-4 hover:opacity-80 transition-opacity">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <ShoppingBag className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-foreground text-lg">{store.storeName}</p>
+                    <p className="text-sm text-muted-foreground">Your neighborhood store</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </Link>
+
+                {/* Cart Items */}
+                <div className="space-y-3">
+                  {store.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 p-3 bg-background rounded-xl">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        width={60}
+                        height={60}
+                        className="rounded-lg object-cover"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground">{item.name}</h3>
+                        <p className="text-primary font-bold">₱{item.price}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleUpdateQuantity(item.id, -1)}
+                          className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                        <button
+                          onClick={() => handleUpdateQuantity(item.id, 1)}
+                          className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-colors ml-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Location Section */}
           <div className="px-4 py-4">
-            <Link href="/store/1" className="flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-foreground text-sm">{storeName}</p>
-                <p className="text-xs text-muted-foreground">0.3 km away</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </Link>
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+              <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                Delivery Location
+              </h3>
+              {userLocation ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <span>Location found: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}</span>
+                  <button
+                    onClick={getUserLocation}
+                    className="ml-auto px-3 py-1 bg-primary text-primary-foreground text-xs rounded-full hover:bg-primary/90 transition-colors"
+                  >
+                    Update PIN
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <span>Getting your location...</span>
+                  <button
+                    onClick={getUserLocation}
+                    className="ml-auto px-3 py-1 bg-muted text-foreground text-xs rounded-full hover:bg-muted/80 transition-colors"
+                  >
+                    Enable Location
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Cart Items List */}
-          <div className="px-4">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-3">
-              Items ({cartItems.length})
-            </h2>
-            <div className="flex flex-col gap-3">
-              {cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 p-3 bg-card rounded-2xl border border-border shadow-sm"
-                >
-                  {/* Product Image */}
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-                    <Image
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                    />
+          {/* Payment Method */}
+          <div className="px-4 py-4">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+              <h3 className="font-bold text-foreground mb-3">Payment Method</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 p-3 bg-background rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="cod"
+                    checked={paymentMethod === "cod"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-4 h-4 text-primary"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">Cash on Delivery (COD)</p>
+                    <p className="text-sm text-muted-foreground">Pay when your order arrives</p>
                   </div>
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                </label>
+              </div>
+            </div>
+          </div>
 
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-foreground text-sm truncate">{item.name}</h3>
-                    <p className="text-xs text-muted-foreground mb-1">{item.unit}</p>
-                    <p className="font-extrabold text-primary">₱{item.price * item.quantity}</p>
-                  </div>
-
-                  {/* Quantity Controls */}
-                  <div className="flex flex-col items-end gap-2">
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center hover:bg-destructive/20 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => updateCartQuantity(item.id, -1)}
-                        className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-                      >
-                        <Minus className="w-4 h-4 text-foreground" />
-                      </button>
-                      <span className="w-8 text-center font-bold text-foreground text-sm">{item.quantity}</span>
-                      <button
-                        onClick={() => updateCartQuantity(item.id, 1)}
-                        className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors"
-                      >
-                        <Plus className="w-4 h-4 text-primary-foreground" />
-                      </button>
-                    </div>
-                  </div>
+          {/* Order Summary */}
+          <div className="px-4 py-4">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+              <h3 className="font-bold text-foreground mb-3">Order Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal ({totalItems} items)</span>
+                  <span>₱{totalPrice}</span>
                 </div>
-              ))}
+                <div className="flex justify-between">
+                  <span>Delivery Fee</span>
+                  <span>₱50.00</span>
+                </div>
+                <div className="border-t pt-2 flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>₱{totalPrice + 50}</span>
+                </div>
+              </div>
             </div>
           </div>
         </>
-      )}
-
-      {/* Fixed Bottom Summary & CTA */}
-      {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
-          {/* Price Summary Card */}
-          <div className="px-4 py-4">
-            <div className="bg-muted/50 rounded-2xl p-4">
-              <div className="flex flex-col gap-2 mb-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">Subtotal</span>
-                  <span className="font-semibold text-foreground">₱{subtotal}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">Delivery Fee</span>
-                  <span className="font-semibold text-foreground">₱{deliveryFee}</span>
-                </div>
-              </div>
-              <div className="h-px bg-border mb-3" />
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-foreground">Total</span>
-                <span className="text-2xl font-extrabold text-primary">₱{total}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Checkout Button */}
-          <div className="px-4 pb-6">
-            <button
-              onClick={() => setIsCheckout(true)}
-              className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-2xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25 flex items-center justify-center gap-2"
-            >
-              <span>Checkout</span>
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
       )}
     </main>
   )

@@ -2,82 +2,24 @@
 
 import { useState, useEffect } from "react"
 import { AYTSLogo } from "@/components/ayts-logo"
-import { ChevronLeft, SlidersHorizontal, MapPin, X, Check } from "lucide-react"
+import { ChevronLeft, SlidersHorizontal, MapPin, X, Check, Star, Clock, Phone } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useApp } from "@/context/app-context"
 import { useRouter } from "next/navigation"
-
-const stores = [
-  {
-    id: 1,
-    name: "Fresh Mart Grocery",
-    category: "Grocery",
-    distance: "0.3 km",
-    image: "/grocery-store-front-with-fresh-produce.jpg",
-  },
-  {
-    id: 2,
-    name: "HealthPlus Pharmacy",
-    category: "Pharmacy",
-    distance: "0.5 km",
-    image: "/pharmacy-store-front-green-cross.jpg",
-  },
-  {
-    id: 3,
-    name: "Maria's Vegetable Stand",
-    category: "Vegetable Vendors",
-    distance: "0.7 km",
-    image: "/vegetable-market-stall-colorful.jpg",
-  },
-  {
-    id: 4,
-    name: "AquaPure Refilling Station",
-    category: "Water Refillers",
-    distance: "0.8 km",
-    image: "/water-refilling-station-blue-bottles.jpg",
-  },
-  {
-    id: 5,
-    name: "BuildRight Hardware",
-    category: "Construction Supplies",
-    distance: "1.2 km",
-    image: "/hardware-store-construction-supplies.jpg",
-  },
-  {
-    id: 6,
-    name: "Juan's Sari-Sari Store",
-    category: "Local Businesses",
-    distance: "0.2 km",
-    image: "/small-convenience-store-colorful.jpg",
-  },
-  {
-    id: 7,
-    name: "Green Valley Produce",
-    category: "Grocery",
-    distance: "1.5 km",
-    image: "/organic-grocery-store-produce.jpg",
-  },
-  {
-    id: 8,
-    name: "MedCare Drugstore",
-    category: "Pharmacy",
-    distance: "1.8 km",
-    image: "/modern-pharmacy-drugstore.jpg",
-  },
-]
+import { api, Store, Category, Location } from "@/lib/api"
 
 const sortOptions = [
-  { id: "distance", label: "Distance" },
   { id: "name", label: "Name (A-Z)" },
-  { id: "category", label: "Category" },
+  { id: "rating", label: "Rating" },
+  { id: "created_at", label: "Newest First" },
 ]
 
 const categoryFilters = [
   "All",
   "Grocery",
-  "Pharmacy",
-  "Vegetable Vendors",
+  "Pharmacy", 
+  "Vegetables",
   "Water Refillers",
   "Construction Supplies",
   "Local Businesses",
@@ -85,10 +27,97 @@ const categoryFilters = [
 
 export default function StoresPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [sortBy, setSortBy] = useState("distance")
+  const [sortBy, setSortBy] = useState("name")
+  const [stores, setStores] = useState<Store[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  })
   const { selectedLocation, selectedCategory, setSelectedCategory } = useApp()
   const router = useRouter()
   const [filterCategory, setFilterCategory] = useState(selectedCategory || "All")
+
+  const fetchStores = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getStores({
+        limit: pagination.limit,
+        locationId: selectedLocation?.id || undefined,
+      });
+
+      if (response.success && response.data) {
+        // Handle direct array response from API
+        setStores(response.data);
+        
+        // Update pagination if available
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch stores:', error);
+      // Set fallback mock data
+      setStores([
+        {
+          id: '1',
+          vendorId: 'vendor-1',
+          name: 'Fresh Mart Grocery',
+          description: 'Your friendly neighborhood grocery store',
+          categoryId: '1',
+          locationId: selectedLocation?.id || '1',
+          address: '123 Main St, Manila',
+          phone: '+639987654321',
+          email: 'freshmart@example.com',
+          rating: 4.5,
+          totalReviews: 25,
+          isVerified: true,
+          isActive: true,
+          bannerUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+          logoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200',
+          operatingHours: {
+            mon: { open: '08:00', close: '20:00' },
+            tue: { open: '08:00', close: '20:00' },
+            wed: { open: '08:00', close: '20:00' },
+            thu: { open: '08:00', close: '20:00' },
+            fri: { open: '08:00', close: '20:00' },
+            sat: { open: '08:00', close: '18:00' },
+            sun: { open: '09:00', close: '17:00' }
+          },
+          deliveryRadiusKm: 5,
+          minimumOrderAmount: 100,
+          deliveryFee: 50,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.getCategories();
+      if (response.success && response.data) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      // Fallback categories
+      setCategories([
+        { id: "1", name: "Grocery", slug: "grocery", isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
+        { id: "2", name: "Pharmacy", slug: "pharmacy", isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
+        { id: "3", name: "Vegetables", slug: "vegetables", isActive: true, sortOrder: 3, createdAt: new Date().toISOString() },
+        { id: "4", name: "Water Refillers", slug: "water-refillers", isActive: true, sortOrder: 4, createdAt: new Date().toISOString() },
+        { id: "5", name: "Construction Supplies", slug: "construction", isActive: true, sortOrder: 5, createdAt: new Date().toISOString() },
+        { id: "6", name: "Local Businesses", slug: "local", isActive: true, sortOrder: 6, createdAt: new Date().toISOString() }
+      ]);
+    }
+  };
 
   useEffect(() => {
     if (!selectedLocation) {
@@ -102,24 +131,12 @@ export default function StoresPage() {
     }
   }, [selectedCategory])
 
-  const filteredStores = stores
-    .filter((store) => filterCategory === "All" || store.category === filterCategory)
-    .sort((a, b) => {
-      if (sortBy === "distance") {
-        return Number.parseFloat(a.distance) - Number.parseFloat(b.distance)
-      }
-      if (sortBy === "name") {
-        return a.name.localeCompare(b.name)
-      }
-      if (sortBy === "category") {
-        return a.category.localeCompare(b.category)
-      }
-      return 0
-    })
-
-  const handleStoreClick = (storeId: number) => {
-    router.push(`/store/${storeId}`)
-  }
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchStores();
+      fetchCategories();
+    }
+  }, [selectedLocation, pagination.page, sortBy])
 
   const handleFilterChange = (category: string) => {
     setFilterCategory(category)
@@ -130,8 +147,60 @@ export default function StoresPage() {
     }
   }
 
+  const filteredStores = stores
+    .filter((store) => {
+      if (filterCategory === "All") return true;
+      // Handle both API response format (store.categories.name) and fallback format (store.categoryId)
+      const categoryName = (store as any).categories?.name || 
+                          categories.find(c => c.id === (store as any).categoryId)?.name;
+      return categoryName === filterCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      }
+      if (sortBy === "rating") {
+        return b.rating - a.rating;
+      }
+      if (sortBy === "created_at") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return 0;
+    })
+
+  const handleStoreClick = (storeId: string) => {
+    router.push(`/stores/${storeId}`)
+  }
+
+  const formatOperatingHours = (hours: Record<string, { open: string; close: string }> | null | undefined) => {
+    if (!hours) return 'Hours not available';
+    
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    // Handle both 'fri' and 'friday' formats
+    const todayShort = today.slice(0, 3);
+    const todayHours = hours[today] || hours[todayShort];
+    
+    if (!todayHours) return 'Closed';
+    return `Today: ${todayHours.open} - ${todayHours.close}`;
+  };
+
   if (!selectedLocation) {
     return null
+  }
+
+  if (loading && stores.length === 0) {
+    return (
+      <main className="min-h-screen bg-background pb-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
+          <div className="grid grid-cols-1 gap-4 px-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-gray-200 rounded-2xl h-24"></div>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -195,39 +264,69 @@ export default function StoresPage() {
 
         {/* Store List */}
         <div className="flex flex-col gap-4">
-          {filteredStores.map((store) => (
-            <button
-              key={store.id}
-              onClick={() => handleStoreClick(store.id)}
-              className="flex items-center gap-4 p-4 bg-card rounded-2xl shadow-sm border border-border hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-left"
-            >
-              {/* Store Image */}
-              <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-                <Image
-                  src={store.image || "/placeholder.svg"}
-                  alt={store.name}
-                  width={80}
-                  height={80}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Store Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-foreground text-base mb-1 truncate">{store.name}</h3>
-                <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full mb-2">
-                  {store.category}
-                </span>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span className="text-sm">{store.distance}</span>
+          {filteredStores.map((store) => {
+            const categoryName = categories.find(c => c.id === store.categoryId)?.name || 'Unknown';
+            return (
+              <button
+                key={store.id}
+                onClick={() => handleStoreClick(store.id)}
+                className="flex items-center gap-4 p-4 bg-card rounded-2xl shadow-sm border border-border hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-left"
+              >
+                {/* Store Image */}
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                  <Image
+                    src={store.bannerUrl || store.logoUrl || "/placeholder.svg"}
+                    alt={store.name}
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              </div>
 
-              {/* Arrow indicator */}
-              <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180 flex-shrink-0" />
-            </button>
-          ))}
+                {/* Store Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="font-bold text-foreground text-base truncate">{store.name}</h3>
+                    {store.rating > 0 && (
+                      <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs font-medium">{store.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full mb-2">
+                    {categoryName}
+                  </span>
+                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span className="text-sm truncate">{store.address}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span className="text-xs">{formatOperatingHours(store.operatingHours)}</span>
+                    </div>
+                    {store.phone && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3.5 h-3.5" />
+                        <span className="text-xs">{store.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
+                    <span>Min: ₱{((store as any).minimum_order_amount || (store as any).minimumOrderAmount || 0).toFixed(2)}</span>
+                    <span>Delivery: ₱{((store as any).delivery_fee || (store as any).deliveryFee || 0).toFixed(2)}</span>
+                    {((store as any).is_verified || (store as any).isVerified) && (
+                      <span className="text-green-600 font-medium">✓ Verified</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Arrow indicator */}
+                <ChevronLeft className="w-5 h-5 text-muted-foreground rotate-180 flex-shrink-0" />
+              </button>
+            );
+          })}
         </div>
 
         {/* Empty State */}

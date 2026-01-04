@@ -1,228 +1,228 @@
-🌱 AYTS — Local Marketplace App
+    🌱 AYTS — Local Marketplace App
 
-A community-driven platform to browse and order from local stores.
+    A community-driven platform to browse and order from local stores.
 
-📌 Project Overview
+    📌 Project Overview
 
-AYTS is a mobile-first marketplace connecting users to local community stores such as groceries, pharmacies, vegetable vendors, water refillers, and construction suppliers. Users select their location and browse available stores, products, and place orders for delivery.
+    AYTS is a mobile-first marketplace connecting users to local community stores such as groceries, pharmacies, vegetable vendors, water refillers, and construction suppliers. Users select their location and browse available stores, products, and place orders for delivery.
 
-This project is currently frontend-first using v0 with Supabase planned for backend integration.
+    This project is currently frontend-first using v0 with Supabase planned for backend integration.
 
-🎨 Branding
+    🎨 Branding
 
-Name: AYTS
+    Name: AYTS
 
-Primary Color: Green — #1D6E3E
+    Primary Color: Green — #1D6E3E
 
-Logo Concept: Map pin combined with a shopping bag
+    Logo Concept: Map pin combined with a shopping bag
 
-Design Style: Clean, modern, rounded, community-friendly UI
+    Design Style: Clean, modern, rounded, community-friendly UI
 
-📱 User Flow (Updated)
-1. Landing Page (Location Selector included)
+    📱 User Flow (Updated)
+    1. Landing Page (Location Selector included)
 
-The landing screen includes:
+    The landing screen includes:
 
-Welcome message
+    Welcome message
 
-Subtext
+    Subtext
 
-Location selector dropdown
+    Location selector dropdown
 
-CTA: Select My Location
+    CTA: Select My Location
 
-Next: Goes directly to Store Categories Page.
+    Next: Goes directly to Store Categories Page.
 
-2. Store Categories Page
+    2. Store Categories Page
 
-Displays category cards such as:
+    Displays category cards such as:
 
-Grocery
+    Grocery
 
-Pharmacy
+    Pharmacy
 
-Vegetables
+    Vegetables
 
-Water Refillers
+    Water Refillers
 
-Construction Supplies
+    Construction Supplies
 
-Local Businesses
+    Local Businesses
 
-Next: Selecting a category → Store List Page
+    Next: Selecting a category → Store List Page
 
-3. Store List Page
+    3. Store List Page
 
-Shows stores available in the selected location + category.
+    Shows stores available in the selected location + category.
 
-Each store card includes:
+    Each store card includes:
 
-Image
+    Image
 
-Name
+    Name
 
-Category
+    Category
 
-(Optional) distance
+    (Optional) distance
 
-Next: Selecting a store → Store Page
+    Next: Selecting a store → Store Page
 
-4. Store Page
+    4. Store Page
 
-Store details:
+    Store details:
 
-Banner
+    Banner
 
-Name
+    Name
 
-Verified badge
+    Verified badge
 
-Tabs: Products | Info
+    Tabs: Products | Info
 
-Products shown as cards with:
+    Products shown as cards with:
 
-Image
+    Image
 
-Name
+    Name
 
-Price
+    Price
 
-Add to Cart
+    Add to Cart
 
-Next: Selecting a product → Product Details Page
+    Next: Selecting a product → Product Details Page
 
-5. Product Details Page
+    5. Product Details Page
 
-Elements:
+    Elements:
 
-Large image
+    Large image
 
-Name and price
+    Name and price
 
-Description
+    Description
 
-Quantity selector
+    Quantity selector
 
-Add to Cart
+    Add to Cart
 
-Next:
+    Next:
 
-User can go back
+    User can go back
 
-Or open Cart
+    Or open Cart
 
-6. Cart Page
+    6. Cart Page
 
-Displays:
+    Displays:
 
-Cart items
+    Cart items
 
-Quantity steppers
+    Quantity steppers
 
-Prices
+    Prices
 
-Total summary
+    Total summary
 
-Next: Checkout → Checkout Page
+    Next: Checkout → Checkout Page
 
-7. Checkout Page
+    7. Checkout Page
 
-Form fields:
+    Form fields:
 
-Name
+    Name
 
-Phone
+    Phone
 
-Delivery address
+    Delivery address
 
-Notes
+    Notes
 
-Includes order summary + Place Order button.
+    Includes order summary + Place Order button.
 
-Next: → Order Confirmation Page
+    Next: → Order Confirmation Page
 
-8. Order Confirmation Page
+    8. Order Confirmation Page
 
-Shows:
+    Shows:
 
-Success check icon
+    Success check icon
 
-“Your order has been placed!”
+    “Your order has been placed!”
 
-Button: Back to Home
+    Button: Back to Home
 
-Next: Returns user to Store Categories Page (location remains saved).
+    Next: Returns user to Store Categories Page (location remains saved).
 
-🔗 Connected Screen Logic
+    🔗 Connected Screen Logic
 
-We built a complete navigation flow ensuring:
+    We built a complete navigation flow ensuring:
 
-Location selected on landing page flows to every screen
+    Location selected on landing page flows to every screen
 
-Category → Store List → Store → Product → Cart → Checkout → Confirmation
+    Category → Store List → Store → Product → Cart → Checkout → Confirmation
 
-Global state planned for:
+    Global state planned for:
 
-selectedLocation
+    selectedLocation
 
-selectedCategory
+    selectedCategory
 
-cartItems
+    cartItems
 
-🧩 v0 Prompts Created
+    🧩 v0 Prompts Created
 
-We generated:
+    We generated:
 
-Individual prompts for every screen
+    Individual prompts for every screen
 
-A master prompt to connect all screens
+    A master prompt to connect all screens
 
-An updated master prompt after removing the separate location-selector page
+    An updated master prompt after removing the separate location-selector page
 
-Branding guidance for consistent design across all screens
+    Branding guidance for consistent design across all screens
 
-These prompts now represent the full UX/UI foundation of the AYTS app.
+    These prompts now represent the full UX/UI foundation of the AYTS app.
 
-🛠️ Next Steps (Recommended)
+    🛠️ Next Steps (Recommended)
 
-You can proceed with any of these:
+    You can proceed with any of these:
 
-Frontend
+    Frontend
 
-Generate reusable component library (buttons, inputs, cards) in v0
+    Generate reusable component library (buttons, inputs, cards) in v0
 
-Export v0 project to Next.js or React
+    Export v0 project to Next.js or React
 
-Add router + global state (Zustand / Context)
+    Add router + global state (Zustand / Context)
 
-Backend Setup (Supabase)
+    Backend Setup (Supabase)
 
-Create database schema:
+    Create database schema:
 
-Locations
+    Locations
 
-Categories
+    Categories
 
-Stores
+    Stores
 
-Products
+    Products
 
-Cart
+    Cart
 
-Orders
+    Orders
 
-Prepare API endpoints (REST or RPC)
+    Prepare API endpoints (REST or RPC)
 
-Vendor / Admin Tools
+    Vendor / Admin Tools
 
-Vendor onboarding UI
+    Vendor onboarding UI
 
-Store dashboard
+    Store dashboard
 
-Product management screen
+    Product management screen
 
-Branding
+    Branding
 
-Finalize logo
+    Finalize logo
 
-Create color system + typography scale
+    Create color system + typography scale

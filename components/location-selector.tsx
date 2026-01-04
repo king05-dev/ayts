@@ -1,25 +1,50 @@
 "use client"
 
 import { MapPin, ChevronDown, Search, X } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useApp, type Location } from "@/context/app-context"
-
-const LOCATIONS: Location[] = [
-  { id: 1, name: "Barangay San Miguel", area: "Central District" },
-  { id: 2, name: "Barangay Riverside", area: "East Side" },
-  { id: 3, name: "Barangay Oakwood", area: "North District" },
-  { id: 4, name: "Barangay Greenfield", area: "West Side" },
-  { id: 5, name: "Barangay Sunnyvale", area: "South District" },
-  { id: 6, name: "Barangay Hillcrest", area: "Central District" },
-]
+import { api } from "@/lib/api"
 
 export function LocationSelector() {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [locations, setLocations] = useState<Location[]>([])
+  const [loading, setLoading] = useState(false)
   const { selectedLocation, setSelectedLocation } = useApp()
 
-  const filteredLocations = LOCATIONS.filter(
-    (loc) =>
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        setLoading(true)
+        const response = await api.getLocations()
+        if (response.success && response.data) {
+          // Transform API data to match frontend Location type
+          const transformedLocations = response.data.map((loc: any) => ({
+            id: loc.id,
+            name: loc.name,
+            area: `${loc.city}, ${loc.province}`
+          }))
+          setLocations(transformedLocations)
+        }
+      } catch (error) {
+        console.error('Failed to fetch locations:', error)
+        // Fallback to mock data if API fails
+        setLocations([
+          { id: "1", name: "Manila", area: "Metro Manila" },
+          { id: "2", name: "Quezon City", area: "Metro Manila" },
+          { id: "3", name: "Makati", area: "Metro Manila" },
+          { id: "4", name: "Pasig", area: "Metro Manila" }
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchLocations()
+  }, [])
+
+  const filteredLocations = locations.filter(
+    (loc: Location) =>
       loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loc.area.toLowerCase().includes(searchQuery.toLowerCase()),
   )

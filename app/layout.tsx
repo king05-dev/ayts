@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Nunito } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { AppProvider } from "@/context/app-context"
+import { AuthProvider } from "@/contexts/AuthContext"
 import "./globals.css"
 
 const nunito = Nunito({
@@ -32,7 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${nunito.className} font-sans antialiased`}>
-        <AppProvider>{children}</AppProvider>
+        <AuthProvider>
+          <AppProvider>{children}</AppProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>
