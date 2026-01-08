@@ -1,35 +1,28 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { AYTSLogo } from "@/components/ayts-logo"
 import { ChevronLeft, Minus, Plus, ShoppingCart, Store, Truck, Clock, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useApp } from "@/context/app-context"
-import { useRouter } from "next/navigation"
-
-const productData = {
-  id: 1,
-  name: "Fresh Organic Bananas",
-  price: 45,
-  unit: "per kg",
-  description:
-    "Premium quality organic bananas sourced directly from local farms. These bananas are naturally ripened and free from any artificial chemicals or preservatives. Perfect for smoothies, baking, or enjoying as a healthy snack.",
-  image: "/fresh-yellow-bananas.jpg",
-  store: {
-    id: 1,
-    name: "Fresh Mart Grocery",
-    distance: "0.3 km",
-  },
-  inStock: true,
-  deliveryNotes: "Same-day delivery available for orders before 2 PM",
-}
+import { useRouter, useParams } from "next/navigation"
+import { api, Product } from "@/lib/api"
 
 export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [isAdded, setIsAdded] = useState(false)
   const { selectedLocation, addToCart, getCartItemCount } = useApp()
   const router = useRouter()
+  const params = useParams()
+
+  // Fetch product data using React Query
+  const { data: product, isLoading, error } = useQuery({
+    queryKey: ["product", params.id],
+    queryFn: () => api.getProduct(params.id as string),
+    enabled: !!params.id,
+  })
 
   useEffect(() => {
     if (!selectedLocation) {
@@ -41,26 +34,53 @@ export default function ProductPage() {
   const decrementQuantity = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))
 
   const handleAddToCart = () => {
+    if (!product?.data) return
+    
     for (let i = 0; i < quantity; i++) {
       addToCart({
-        id: productData.id,
-        name: productData.name,
-        price: productData.price,
-        unit: productData.unit,
-        image: productData.image,
-        storeId: productData.store.id,
-        storeName: productData.store.name,
+        id: parseInt(product.data.id),
+        name: product.data.name,
+        price: product.data.price,
+        unit: product.data.category || "per unit", // Use category as unit or fallback
+        image: product.data.images?.[0] || "/placeholder.svg",
+        storeId: parseInt(product.data.storeId),
+        storeName: product.data.store?.name || "Unknown Store",
       })
     }
     setIsAdded(true)
     setTimeout(() => setIsAdded(false), 2000)
   }
 
-  const totalPrice = productData.price * quantity
+  const totalPrice = (product?.data?.price || 0) * quantity
   const cartItemCount = getCartItemCount()
 
   if (!selectedLocation) {
     return null
+  }
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading product...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (error || !product?.data) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Product Not Found</h1>
+          <p className="text-muted-foreground mb-4">The product you're looking for doesn't exist.</p>
+          <Link href="/" className="text-primary hover:underline">
+            Return to Home
+          </Link>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -69,7 +89,7 @@ export default function ProductPage() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="px-4 py-4 flex items-center justify-between">
           <Link
-            href="/store/1"
+            href={`/store/${product.data.storeId}`}
             className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
@@ -96,13 +116,13 @@ export default function ProductPage() {
       <div className="px-6 pt-6">
         <div className="aspect-square relative bg-muted rounded-3xl overflow-hidden shadow-sm">
           <Image
-            src={productData.image || "/placeholder.svg"}
-            alt={productData.name}
+            src={product.data.images?.[0] || "/placeholder.svg"}
+            alt={product.data.name}
             fill
             className="object-cover"
             priority
           />
-          {productData.inStock && (
+          {product.data.inventoryCount > 0 && (
             <div className="absolute top-4 left-4 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full">
               In Stock
             </div>
@@ -114,17 +134,17 @@ export default function ProductPage() {
       <div className="px-6 pt-8">
         {/* Name & Price */}
         <div className="mb-6">
-          <h1 className="text-2xl font-extrabold text-foreground mb-2 text-balance">{productData.name}</h1>
+          <h1 className="text-2xl font-extrabold text-foreground mb-2 text-balance">{product.data.name}</h1>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-primary">₱{productData.price}</span>
-            <span className="text-muted-foreground text-sm">{productData.unit}</span>
+            <span className="text-3xl font-extrabold text-primary">₱{product.data.price}</span>
+            <span className="text-muted-foreground text-sm">{product.data.category || "per unit"}</span>
           </div>
         </div>
 
         {/* Description */}
         <div className="mb-8">
           <h2 className="text-sm font-bold text-foreground mb-2 uppercase tracking-wide">Description</h2>
-          <p className="text-muted-foreground leading-relaxed">{productData.description}</p>
+          <p className="text-muted-foreground leading-relaxed">{product.data.description || "No description available."}</p>
         </div>
 
         {/* Quantity Stepper */}
@@ -162,8 +182,8 @@ export default function ProductPage() {
             </div>
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-0.5">Sold by</p>
-              <p className="font-bold text-foreground">{productData.store.name}</p>
-              <p className="text-xs text-muted-foreground">{productData.store.distance} away</p>
+              <p className="font-bold text-foreground">{product.data.store?.name || "Unknown Store"}</p>
+              <p className="text-xs text-muted-foreground">Local Store</p>
             </div>
           </div>
 
@@ -174,7 +194,7 @@ export default function ProductPage() {
             </div>
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-0.5">Delivery Note</p>
-              <p className="font-semibold text-foreground text-sm">{productData.deliveryNotes}</p>
+              <p className="font-semibold text-foreground text-sm">Same-day delivery available for orders before 2 PM</p>
             </div>
           </div>
 

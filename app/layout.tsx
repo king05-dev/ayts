@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Nunito } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { QueryProvider } from "@/components/query-provider"
 import { AppProvider } from "@/context/app-context"
 import { AuthProvider } from "@/contexts/AuthContext"
 import "./globals.css"
@@ -33,9 +34,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${nunito.className} font-sans antialiased`}>
-        <AuthProvider>
-          <AppProvider>{children}</AppProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AppProvider>{children}</AppProvider>
+          </AuthProvider>
+        </QueryProvider>
         <Analytics />
       </body>
     </html>

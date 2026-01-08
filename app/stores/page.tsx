@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { AYTSLogo } from "@/components/ayts-logo"
 import { ChevronLeft, SlidersHorizontal, MapPin, X, Check, Star, Clock, Phone } from "lucide-react"
 import Link from "next/link"
@@ -28,115 +29,49 @@ const categoryFilters = [
 export default function StoresPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [sortBy, setSortBy] = useState("name")
-  const [stores, setStores] = useState<Store[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
-  })
   const { selectedLocation, selectedCategory, setSelectedCategory } = useApp()
   const router = useRouter()
   const [filterCategory, setFilterCategory] = useState(selectedCategory || "All")
 
-  const fetchStores = async () => {
-    try {
-      setLoading(true);
-      const response = await api.getStores({
-        limit: pagination.limit,
-        locationId: selectedLocation?.id || undefined,
-      });
+  // Fetch stores using React Query
+  const { data: storesData, isLoading, error } = useQuery({
+    queryKey: ["stores", selectedLocation?.id, filterCategory, sortBy],
+    queryFn: () => api.getStores({
+      limit: 20,
+      locationId: selectedLocation?.id || undefined,
+      categoryId: filterCategory !== "All" ? filterCategory : undefined,
+      sortBy: sortBy,
+    }),
+    enabled: !!selectedLocation,
+  })
 
-      if (response.success && response.data) {
-        // Handle direct array response from API
-        setStores(response.data);
-        
-        // Update pagination if available
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch stores:', error);
-      // Set fallback mock data
-      setStores([
-        {
-          id: '1',
-          vendorId: 'vendor-1',
-          name: 'Fresh Mart Grocery',
-          description: 'Your friendly neighborhood grocery store',
-          categoryId: '1',
-          locationId: selectedLocation?.id || '1',
-          address: '123 Main St, Manila',
-          phone: '+639987654321',
-          email: 'freshmart@example.com',
-          rating: 4.5,
-          totalReviews: 25,
-          isVerified: true,
-          isActive: true,
-          bannerUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
-          logoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200',
-          operatingHours: {
-            mon: { open: '08:00', close: '20:00' },
-            tue: { open: '08:00', close: '20:00' },
-            wed: { open: '08:00', close: '20:00' },
-            thu: { open: '08:00', close: '20:00' },
-            fri: { open: '08:00', close: '20:00' },
-            sat: { open: '08:00', close: '18:00' },
-            sun: { open: '09:00', close: '17:00' }
-          },
-          deliveryRadiusKm: 5,
-          minimumOrderAmount: 100,
-          deliveryFee: 50,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch categories using React Query
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => api.getCategories(),
+  })
 
-  const fetchCategories = async () => {
-    try {
-      const response = await api.getCategories();
-      if (response.success && response.data) {
-        setCategories(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-      // Fallback categories
-      setCategories([
-        { id: "1", name: "Grocery", slug: "grocery", isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
-        { id: "2", name: "Pharmacy", slug: "pharmacy", isActive: true, sortOrder: 2, createdAt: new Date().toISOString() },
-        { id: "3", name: "Vegetables", slug: "vegetables", isActive: true, sortOrder: 3, createdAt: new Date().toISOString() },
-        { id: "4", name: "Water Refillers", slug: "water-refillers", isActive: true, sortOrder: 4, createdAt: new Date().toISOString() },
-        { id: "5", name: "Construction Supplies", slug: "construction", isActive: true, sortOrder: 5, createdAt: new Date().toISOString() },
-        { id: "6", name: "Local Businesses", slug: "local", isActive: true, sortOrder: 6, createdAt: new Date().toISOString() }
-      ]);
-    }
-  };
+  const stores = storesData?.data || []
+  const pagination = storesData?.pagination;
+  const categories = categoriesData?.data || []
 
-  useEffect(() => {
-    if (!selectedLocation) {
-      router.push("/")
-    }
-  }, [selectedLocation, router])
+  const filteredStores = stores.filter(store => {
+    if (filterCategory === "All") return true;
+    return store.categoryId === filterCategory;
+  });
 
-  useEffect(() => {
-    if (selectedCategory) {
-      setFilterCategory(selectedCategory)
+  const sortedStores = [...filteredStores].sort((a, b) => {
+    switch (sortBy) {
+      case "name":
+        return a.name.localeCompare(b.name);
+      case "rating":
+        return b.rating - a.rating;
+      case "created_at":
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      default:
+        return 0;
     }
-  }, [selectedCategory])
-
-  useEffect(() => {
-    if (selectedLocation) {
-      fetchStores();
-      fetchCategories();
-    }
-  }, [selectedLocation, pagination.page, sortBy])
+  });
 
   const handleFilterChange = (category: string) => {
     setFilterCategory(category)
@@ -184,11 +119,43 @@ export default function StoresPage() {
     return `Today: ${todayHours.open} - ${todayHours.close}`;
   };
 
+  useEffect(() => {
+    if (!selectedLocation) {
+      router.push("/")
+    }
+  }, [selectedLocation, router])
+
+  // Loading and error states
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading stores...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Error Loading Stores</h1>
+          <p className="text-muted-foreground mb-4">Unable to load stores. Please try again.</p>
+          <Link href="/" className="text-primary hover:underline">
+            Return to Home
+          </Link>
+        </div>
+      </main>
+    )
+  }
+
   if (!selectedLocation) {
     return null
   }
 
-  if (loading && stores.length === 0) {
+  if (filteredStores.length === 0) {
     return (
       <main className="min-h-screen bg-background pb-6">
         <div className="animate-pulse">
