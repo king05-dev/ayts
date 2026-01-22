@@ -83,6 +83,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
       id: product.id, // Keep as string to preserve UUID
       name: product.name,
       price: product.price,
+      unit: product.category || "per unit",
       image: product.images?.[0] || '/placeholder.svg',
       storeId: storeId,
       storeName: store?.name || 'Store'

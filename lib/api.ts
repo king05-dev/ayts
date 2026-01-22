@@ -611,6 +611,15 @@ class ApiClient {
   async getUnreadNotificationCount() {
     return this.request<{ count: number }>('/notifications/unread-count');
   }
+
+  // Public settings (for maintenance mode check)
+  async getPublicSettings() {
+    return this.request('/api/public/settings');
+  }
+
+  async checkHealth() {
+    return this.request('/api/public/health');
+  }
 }
 
 export const api = new ApiClient();

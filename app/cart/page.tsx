@@ -69,14 +69,16 @@ export default function CartPage() {
 
   // Group cart items by store
   const groupedCartItems = cartItems.reduce((acc, item) => {
-    if (!acc[item.storeId]) {
-      acc[item.storeId] = {
-        storeId: item.storeId,
+    const storeKey = String(item.storeId)
+
+    if (!acc[storeKey]) {
+      acc[storeKey] = {
+        storeId: storeKey,
         storeName: item.storeName,
         items: []
       }
     }
-    acc[item.storeId].items.push(item)
+    acc[storeKey].items.push(item)
     return acc
   }, {} as Record<string, { storeId: string, storeName: string, items: typeof cartItems }>)
 

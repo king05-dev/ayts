@@ -39,8 +39,7 @@ export default function StoresPage() {
     queryFn: () => api.getStores({
       limit: 20,
       locationId: selectedLocation?.id || undefined,
-      categoryId: filterCategory !== "All" ? filterCategory : undefined,
-      sortBy: sortBy,
+      categoryId: filterCategory !== "All" ? categories.find(c => c.name === filterCategory)?.id : undefined,
     }),
     enabled: !!selectedLocation,
   })
@@ -54,33 +53,6 @@ export default function StoresPage() {
   const stores = storesData?.data || []
   const pagination = storesData?.pagination;
   const categories = categoriesData?.data || []
-
-  const filteredStores = stores.filter(store => {
-    if (filterCategory === "All") return true;
-    return store.categoryId === filterCategory;
-  });
-
-  const sortedStores = [...filteredStores].sort((a, b) => {
-    switch (sortBy) {
-      case "name":
-        return a.name.localeCompare(b.name);
-      case "rating":
-        return b.rating - a.rating;
-      case "created_at":
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      default:
-        return 0;
-    }
-  });
-
-  const handleFilterChange = (category: string) => {
-    setFilterCategory(category)
-    if (category === "All") {
-      setSelectedCategory(null)
-    } else {
-      setSelectedCategory(category)
-    }
-  }
 
   const filteredStores = stores
     .filter((store) => {
@@ -101,7 +73,16 @@ export default function StoresPage() {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       return 0;
-    })
+    });
+
+  const handleFilterChange = (category: string) => {
+    setFilterCategory(category)
+    if (category === "All") {
+      setSelectedCategory(null)
+    } else {
+      setSelectedCategory(category)
+    }
+  }
 
   const handleStoreClick = (storeId: string) => {
     router.push(`/stores/${storeId}`)
@@ -155,17 +136,70 @@ export default function StoresPage() {
     return null
   }
 
+  // Show "No stores found" when data is loaded but no stores match the filters
   if (filteredStores.length === 0) {
     return (
       <main className="min-h-screen bg-background pb-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-          <div className="grid grid-cols-1 gap-4 px-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-gray-200 rounded-2xl h-24"></div>
-            ))}
+        {/* Header */}
+        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/categories"
+                className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5 text-foreground" />
+              </Link>
+              <div className="flex items-center gap-2">
+                <AYTSLogo className="w-8 h-8" />
+                <span className="text-lg font-bold text-primary">AYTS</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+            >
+              <SlidersHorizontal className="w-5 h-5 text-primary" />
+            </button>
           </div>
+        </header>
+
+        {/* Empty State */}
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <MapPin className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="font-bold text-foreground mb-1">No stores found</h3>
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Try adjusting your filters or check back later
+          </p>
+          <div className="flex flex-col gap-2 text-center">
+            <p className="text-xs text-muted-foreground">
+              Location: {selectedLocation.name}
+            </p>
+            {filterCategory !== "All" && (
+              <p className="text-xs text-muted-foreground">
+                Category: {filterCategory}
+              </p>
+            )}
+            {sortBy !== "name" && (
+              <p className="text-xs text-muted-foreground">
+                Sorted by: {sortOptions.find((o) => o.id === sortBy)?.label}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => handleFilterChange("All")}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
+          >
+            Clear Filters
+          </button>
         </div>
+
+        {/* Footer */}
+        <footer className="px-4 py-6 mt-auto">
+          <p className="text-center text-sm text-muted-foreground font-medium">Powered by your local community</p>
+        </footer>
       </main>
     );
   }

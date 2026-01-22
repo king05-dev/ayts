@@ -5,8 +5,7 @@ import { useState, useEffect } from "react"
 import { useApp, type Location } from "@/context/app-context"
 import { api } from "@/lib/api"
 
-export function LocationSelector() {
-  const [isOpen, setIsOpen] = useState(false)
+export function LocationSelector({ onOpen }: { onOpen: () => void }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [locations, setLocations] = useState<Location[]>([])
   const [loading, setLoading] = useState(false)
@@ -16,7 +15,9 @@ export function LocationSelector() {
     const fetchLocations = async () => {
       try {
         setLoading(true)
+        console.log('Fetching locations from API...')
         const response = await api.getLocations()
+        console.log('Locations API response:', response)
         if (response.success && response.data) {
           // Transform API data to match frontend Location type
           const transformedLocations = response.data.map((loc: any) => ({
@@ -24,24 +25,48 @@ export function LocationSelector() {
             name: loc.name,
             area: `${loc.city}, ${loc.province}`
           }))
+          console.log('Transformed locations:', transformedLocations)
           setLocations(transformedLocations)
+          
+          // Clear any old cached location data that doesn't match the new format
+          const savedLocation = localStorage.getItem('ayts-selected-location')
+          if (savedLocation) {
+            try {
+              const parsed = JSON.parse(savedLocation)
+              // If the saved location has a numeric ID, clear it
+              if (/^\d+$/.test(parsed.id)) {
+                console.log('Clearing old cached location with numeric ID:', parsed.id)
+                localStorage.removeItem('ayts-selected-location')
+                // Clear the selected location in context as well
+                setSelectedLocation(null)
+              }
+            } catch (e) {
+              console.log('Invalid cached location data, clearing it')
+              localStorage.removeItem('ayts-selected-location')
+            }
+          }
+        } else {
+          throw new Error('Invalid response format')
         }
       } catch (error) {
         console.error('Failed to fetch locations:', error)
-        // Fallback to mock data if API fails
-        setLocations([
-          { id: "1", name: "Manila", area: "Metro Manila" },
-          { id: "2", name: "Quezon City", area: "Metro Manila" },
-          { id: "3", name: "Makati", area: "Metro Manila" },
-          { id: "4", name: "Pasig", area: "Metro Manila" }
-        ])
+        // Only use fallback data in development, not in production
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using fallback mock data')
+          setLocations([
+            { id: "ca30882d-5b10-4a05-9745-90d3c07d87f5", name: "Manila", area: "Metro Manila" },
+            { id: "45beb611-02f3-48a8-bf32-f43c499f2681", name: "Quezon City", area: "Metro Manila" },
+            { id: "df8faa9c-865d-4740-8327-8e526ad0a361", name: "Makati", area: "Metro Manila" },
+            { id: "88dcb0e3-4ebe-4188-b8ff-93e116f2a5cb", name: "Pasig", area: "Metro Manila" }
+          ])
+        }
       } finally {
         setLoading(false)
       }
     }
 
     fetchLocations()
-  }, [])
+  }, [setSelectedLocation])
 
   const filteredLocations = locations.filter(
     (loc: Location) =>
@@ -51,7 +76,6 @@ export function LocationSelector() {
 
   const handleSelect = (location: Location) => {
     setSelectedLocation(location)
-    setIsOpen(false)
     setSearchQuery("")
   }
 
@@ -59,7 +83,7 @@ export function LocationSelector() {
     <div className="w-full max-w-sm">
       {/* Location Button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={onOpen}
         className="w-full flex items-center gap-3 px-5 py-4 bg-secondary rounded-2xl border-2 border-border hover:border-primary/30 transition-all duration-200 group"
       >
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -73,77 +97,6 @@ export function LocationSelector() {
         </div>
         <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
       </button>
-
-      {/* Modal Overlay */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
-
-          {/* Modal Content */}
-          <div className="relative w-full max-w-md bg-background rounded-t-3xl sm:rounded-3xl p-6 pb-8 sm:m-4 animate-in slide-in-from-bottom-4 duration-300">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-foreground">Select Location</h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search your area..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-secondary rounded-xl border-2 border-transparent focus:border-primary/30 focus:outline-none text-foreground placeholder:text-muted-foreground transition-colors"
-              />
-            </div>
-
-            {/* Location List */}
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {filteredLocations.map((location) => (
-                <button
-                  key={location.id}
-                  onClick={() => handleSelect(location)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    selectedLocation?.id === location.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary hover:bg-accent text-foreground"
-                  }`}
-                >
-                  <MapPin
-                    className={`w-5 h-5 ${
-                      selectedLocation?.id === location.id ? "text-primary-foreground" : "text-primary"
-                    }`}
-                  />
-                  <div className="text-left">
-                    <p className="font-semibold">{location.name}</p>
-                    <p
-                      className={`text-xs ${
-                        selectedLocation?.id === location.id ? "text-primary-foreground/70" : "text-muted-foreground"
-                      }`}
-                    >
-                      {location.area}
-                    </p>
-                  </div>
-                </button>
-              ))}
-
-              {filteredLocations.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No locations found</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

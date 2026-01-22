@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { QueryProvider } from "@/components/query-provider"
 import { AppProvider } from "@/context/app-context"
 import { AuthProvider } from "@/contexts/AuthContext"
+import MaintenanceMode from "@/components/maintenance-mode"
 import "./globals.css"
 
 const nunito = Nunito({
@@ -36,7 +37,11 @@ export default function RootLayout({
       <body className={`${nunito.className} font-sans antialiased`}>
         <QueryProvider>
           <AuthProvider>
-            <AppProvider>{children}</AppProvider>
+            <AppProvider>
+              <MaintenanceMode>
+                {children}
+              </MaintenanceMode>
+            </AppProvider>
           </AuthProvider>
         </QueryProvider>
         <Analytics />

@@ -64,6 +64,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
       id: parseInt(product.id),
       name: product.name,
       price: product.price,
+      unit: product.category || "per unit",
       image: product.images?.[0] || '/placeholder.svg',
       storeId: storeId,
       storeName: store?.name || 'Store'

@@ -9,13 +9,13 @@ export type Location = {
 }
 
 export type CartItem = {
-  id: number
+  id: string | number
   name: string
   price: number
   quantity: number
   unit: string
   image: string
-  storeId: number
+  storeId: string | number
   storeName: string
 }
 
@@ -26,8 +26,8 @@ type AppContextType = {
   setSelectedCategory: (category: string | null) => void
   cartItems: CartItem[]
   addToCart: (item: Omit<CartItem, "quantity">) => void
-  updateCartQuantity: (id: number, delta: number) => void
-  removeFromCart: (id: number) => void
+  updateCartQuantity: (id: string | number, delta: number, storeId?: string) => void
+  removeFromCart: (id: string | number) => void
   clearCart: () => void
   getCartTotal: () => number
   getCartItemCount: () => number
@@ -48,13 +48,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const savedCart = localStorage.getItem('ayts-cart-items')
 
     if (savedLocation) {
-      setSelectedLocation(JSON.parse(savedLocation))
+      try {
+        const parsed = JSON.parse(savedLocation)
+        // Only restore if it's a valid UUID format, not a numeric ID
+        if (!/^\d+$/.test(parsed.id)) {
+          setSelectedLocation(parsed)
+        } else {
+          console.log('Ignoring cached location with numeric ID:', parsed.id)
+          localStorage.removeItem('ayts-selected-location')
+        }
+      } catch (e) {
+        console.log('Invalid cached location data, clearing it')
+        localStorage.removeItem('ayts-selected-location')
+      }
     }
     if (savedCategory) {
-      setSelectedCategory(JSON.parse(savedCategory))
+      try {
+        setSelectedCategory(JSON.parse(savedCategory))
+      } catch (e) {
+        console.log('Invalid cached category data, clearing it')
+        localStorage.removeItem('ayts-selected-category')
+      }
     }
     if (savedCart) {
-      setCartItems(JSON.parse(savedCart))
+      try {
+        setCartItems(JSON.parse(savedCart))
+      } catch (e) {
+        console.log('Invalid cached cart data, clearing it')
+        localStorage.removeItem('ayts-cart-items')
+      }
     }
 
     setIsHydrated(true)
@@ -93,7 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string | number) => {
     setCartItems((prev) => {
       const newItems = prev.filter((item) => item.id !== id)
       if (isHydrated) {

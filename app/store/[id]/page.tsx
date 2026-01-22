@@ -88,6 +88,15 @@ export default function StorePage() {
   const totalItems = getCartItemCount()
   const totalPrice = getCartTotal()
 
+  const storeHoursText = (() => {
+    const hours = store.data.operatingHours
+    if (!hours || Object.keys(hours).length === 0) return "N/A"
+
+    return Object.entries(hours)
+      .map(([day, range]) => `${day}: ${range.open}-${range.close}`)
+      .join(", ")
+  })()
+
   if (!selectedLocation) {
     return null
   }
@@ -272,7 +281,7 @@ export default function StorePage() {
             {/* About */}
             <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
               <h3 className="font-bold text-foreground mb-3">About</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{storeData.description}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{store.data.description}</p>
             </div>
 
             {/* Contact Info */}
@@ -285,7 +294,7 @@ export default function StorePage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Address</p>
-                    <p className="text-sm font-medium text-foreground">{storeData.address}</p>
+                    <p className="text-sm font-medium text-foreground">{store.data.address}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -294,7 +303,7 @@ export default function StorePage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Store Hours</p>
-                    <p className="text-sm font-medium text-foreground">{storeData.hours}</p>
+                    <p className="text-sm font-medium text-foreground">{storeHoursText}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -303,7 +312,7 @@ export default function StorePage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Contact</p>
-                    <p className="text-sm font-medium text-foreground">{storeData.phone}</p>
+                    <p className="text-sm font-medium text-foreground">{store.data.phone}</p>
                   </div>
                 </div>
               </div>
