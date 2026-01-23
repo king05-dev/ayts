@@ -14,22 +14,52 @@ import { useApp } from "@/context/app-context";
 import { useRouter } from "next/navigation";
 import {
   motion,
-  LayoutGroup,
-  useMotionValueEvent,
-  useScroll,
 } from "framer-motion";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { type Location } from "@/context/app-context";
-import api from "@/lib/api";
+import api, { type Store, type Category } from "@/lib/api";
 
 export default function LandingPage() {
   const { selectedLocation, setSelectedLocation } = useApp();
   const router = useRouter();
-  const { scrollY } = useScroll();
-  const [isCompact, setIsCompact] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locationSearchQuery, setLocationSearchQuery] = useState("");
+
+  // Fetch stores and categories using React Query
+  const { data: stores = [] } = useQuery<Store[]>({
+    queryKey: ["stores"],
+    queryFn: async () => {
+      try {
+        const response = await api.getStores();
+        if (response.success && response.data) {
+          return response.data;
+        }
+        throw new Error("Failed to fetch stores");
+      } catch (error) {
+        console.error("Failed to fetch stores:", error);
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      try {
+        const response = await api.getCategories();
+        if (response.success && response.data) {
+          return response.data;
+        }
+        throw new Error("Failed to fetch categories");
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 30, // 30 minutes
+  });
 
   // Fetch locations using React Query
   const { data: locations = [] } = useQuery<Location[]>({
@@ -78,7 +108,7 @@ export default function LandingPage() {
 
   const handleSelectLocation = () => {
     if (selectedLocation) {
-      router.push("/categories");
+      router.push(`/categories?location=${selectedLocation.id}`);
     }
   };
 
@@ -92,445 +122,145 @@ export default function LandingPage() {
     setSelectedLocation(location);
     setIsLocationModalOpen(false);
     setLocationSearchQuery("");
+    // Navigate to categories with location parameter after selecting location
+    router.push(`/categories?location=${location.id}`);
   };
 
-  const storeCategories = useMemo(
-    () => [
-      {
-        id: "grocery",
-        title: "Grocery Stores",
-        stores: [
-          {
-            id: "g-1",
-            name: "Fresh Greens Market",
-            distance: "Detancy 4.23",
-            rating: 4.8,
-            image:
-              "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "g-2",
-            name: "Bining Ghopq",
-            distance: "Detancy 4.28",
-            rating: 4.6,
-            image:
-              "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "g-3",
-            name: "Fresh Greens Market",
-            distance: "Detancy 4.80",
-            rating: 4.7,
-            image:
-              "https://images.unsplash.com/photo-1580913428735-bd3c269d6a82?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "g-4",
-            name: "Seta Grocers",
-            distance: "Detancy 4.12",
-            rating: 4.5,
-            image:
-              "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=800&q=60",
-          },
-        ],
-      },
-      {
-        id: "pharmacy",
-        title: "Pharmacy",
-        stores: [
-          {
-            id: "p-1",
-            name: "Winte Teark La Ploss",
-            distance: "Setancsy 4.98",
-            rating: 4.9,
-            image:
-              "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "p-2",
-            name: "Shaary Snop",
-            distance: "Setancsy 8.28",
-            rating: 4.4,
-            image:
-              "https://images.unsplash.com/photo-1603398938378-e54eab446dde?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "p-3",
-            name: "Hinte Uretwars",
-            distance: "Detancy 4.75",
-            rating: 4.6,
-            image:
-              "https://images.unsplash.com/photo-1627904455391-0dbe909ba008?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "p-4",
-            name: "Fresh Grans Market",
-            distance: "Detancy 4.75",
-            rating: 4.3,
-            image:
-              "https://images.unsplash.com/photo-1584305574647-2a7d11e5c0c4?auto=format&fit=crop&w=800&q=60",
-          },
-        ],
-      },
-      {
-        id: "hardware",
-        title: "Hardware",
-        stores: [
-          {
-            id: "h-1",
-            name: "Strong Fixes",
-            distance: "Detancy 3.60",
-            rating: 4.7,
-            image:
-              "https://images.unsplash.com/photo-1581578017425-13b6b90c8b3f?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "h-2",
-            name: "ReeekLcres",
-            distance: "Detancy 3.92",
-            rating: 4.5,
-            image:
-              "https://images.unsplash.com/photo-1581141849291-1125c7b692b5?auto=format&fit=crop&w=800&q=60",
-          },
-          {
-            id: "h-3",
-            name: "Rexpore",
-            distance: "Detancy 4.05",
-            rating: 4.6,
-            image:
-              "https://images.unsplash.com/photo-1565182999561-18d7dc61c393?auto=format&fit=crop&w=800&q=60",
-          },
-        ],
-      },
-    ],
-    [],
-  );
+  const storeCategories = useMemo(() => {
+    // Group stores by category and transform for display
+    const groupedStores = categories.map(category => {
+      const categoryStores = stores
+        .filter((store: any) => store.category_id === category.id && store.is_active)
+        .map((store: any) => ({
+          id: store.id,
+          name: store.name,
+          distance: `${store.delivery_radius_km} km`,
+          rating: store.rating || 0,
+          image: store.banner_url || "https://images.unsplash.com/photo-1565182999561-18d7dc61c393?auto=format&fit=crop&w=800&q=60",
+        }));
 
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    if (!isCompact && latest > 40) setIsCompact(true);
-    if (isCompact && latest < 20) setIsCompact(false);
-  });
+      return {
+        id: category.slug,
+        title: category.name,
+        stores: categoryStores,
+      };
+    }).filter(category => category.stores.length > 0); // Only show categories with stores
+
+    return groupedStores;
+  }, [categories, stores]);
+
 
   return (
     <>
-      {/* Compact Header - separate section */}
-      <motion.section
-        layout
-        className={`fixed top-0 left-0 right-0 z-40 bg-background/60 backdrop-blur px-6 pt-4 pb-3 ${
-          isCompact ? "block" : "hidden"
-        }`}
-        transition={{
-          layout: { type: "spring", stiffness: 520, damping: 45 },
-        }}
-      >
-        <div className="mx-auto w-full max-w-6xl">
-          <motion.div
-            className="bg-background/90 backdrop-blur-sm border border-border shadow-lg shadow-foreground/5 rounded-2xl p-4"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ 
-              opacity: isCompact ? 1 : 0,
-              y: isCompact ? 0 : -20,
-            }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            {/* Mobile Compact Layout */}
-            <div className="sm:hidden flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <header className="flex items-center gap-3">
-                  <AYTSLogo className="w-10 h-10" />
-                  <span className="text-xl font-extrabold text-primary tracking-tight">
-                    AYTS
-                  </span>
-                </header>
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <GroceryIcon className="w-5 h-5" />
-                  </div>
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <PharmacyIcon className="w-5 h-5" />
-                  </div>
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <VeggiesIcon className="w-5 h-5" />
-                  </div>
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <ConstructionIcon className="w-5 h-5" />
-                  </div>
+      {/* Fixed Header */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-sm border-b border-border shadow-sm">
+        <div className="mx-auto w-full max-w-[1600px] px-6 py-4">
+          {/* Mobile Layout */}
+          <div className="sm:hidden flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AYTSLogo className="w-10 h-10" />
+                <span className="text-xl font-extrabold text-primary tracking-tight">
+                  AYTS
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <GroceryIcon className="w-5 h-5" />
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <PharmacyIcon className="w-5 h-5" />
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <VeggiesIcon className="w-5 h-5" />
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <ConstructionIcon className="w-5 h-5" />
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-medium text-primary">
+                Local Marketplace
+              </span>
+            </div>
+
+            <div>
+              <LocationSelector onOpen={() => setIsLocationModalOpen(true)} />
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden sm:grid grid-cols-[1.1fr_1fr_auto] items-center gap-4">
+            <div className="text-left">
+              <div className="flex items-center gap-3">
+                <AYTSLogo className="w-10 h-10" />
+                <span className="text-xl font-extrabold text-primary tracking-tight">
+                  AYTS
+                </span>
+              </div>
+
+              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
                 <MapPin className="w-3.5 h-3.5 text-primary" />
                 <span className="text-xs font-medium text-primary">
                   Local Marketplace
                 </span>
               </div>
 
-              <div>
-                <LocationSelector onOpen={() => setIsLocationModalOpen(true)} />
-              </div>
-            </div>
-
-            {/* Desktop Compact Layout */}
-            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-[1.1fr_1fr_auto] items-center gap-4">
-              <div className="text-left">
-                <header className="flex items-center gap-3">
-                  <AYTSLogo className="w-10 h-10" />
-                  <span className="text-xl font-extrabold text-primary tracking-tight">
-                    AYTS
-                  </span>
-                </header>
-
-                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
-                  <MapPin className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-medium text-primary">
-                    Local Marketplace
-                  </span>
-                </div>
-
-                <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-foreground leading-tight text-balance">
-                  Welcome to <span className="text-primary">AYTS</span>
-                </h1>
-
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Find local stores in your community
-                </p>
-              </div>
-
-              <div className="w-full">
-                <LocationSelector onOpen={() => setIsLocationModalOpen(true)} />
-              </div>
-
-              <div className="flex items-center justify-start sm:justify-end gap-3 overflow-x-auto">
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
-                    <GroceryIcon className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Grocery
-                  </span>
-                </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
-                    <PharmacyIcon className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Pharmacy
-                  </span>
-                </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
-                    <VeggiesIcon className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Veggies
-                  </span>
-                </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
-                    <ConstructionIcon className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Hardware
-                  </span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* Expanded Header - separate section */}
-      <motion.section
-        layout
-        className={`${isCompact ? "hidden" : "block"}`}
-        transition={{
-          layout: { type: "spring", stiffness: 520, damping: 45 },
-        }}
-      >
-        <div className="mx-auto w-full max-w-6xl">
-          <motion.div
-            className="bg-background/90 backdrop-blur-sm shadow-foreground/5 rounded-3xl min-h-[100vh] p-7"
-            animate={{
-              opacity: isCompact ? 0 : 1,
-              y: isCompact ? -20 : 0,
-            }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            style={{
-              display: isCompact ? "none" : "block",
-            }}
-          >
-            {/* Mobile Layout */}
-            <div className="sm:hidden flex flex-col items-center text-center gap-6">
-              <header className="flex items-center gap-3 justify-center">
-                <AYTSLogo className="w-12 h-12" />
-                <span className="text-2xl font-extrabold text-primary tracking-tight">
-                  AYTS
-                </span>
-              </header>
-
-              <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary">
-                  Local Marketplace
-                </span>
-              </div>
-
-              <h1 className="mt-5 text-4xl font-extrabold text-foreground leading-tight text-balance">
+              <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-foreground leading-tight text-balance">
                 Welcome to <span className="text-primary">AYTS</span>
               </h1>
 
-              <p className="mt-4 text-lg text-muted-foreground max-w-xs mx-auto leading-relaxed">
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                 Find local stores in your community
               </p>
-
-              <div className="w-full flex flex-col items-center">
-                <div className="w-full flex justify-center">
-                  <LocationSelector
-                    onOpen={() => setIsLocationModalOpen(true)}
-                  />
-                </div>
-
-                <Button
-                  size="lg"
-                  onClick={handleSelectLocation}
-                  disabled={!selectedLocation}
-                  className={`mt-3 max-w-sm w-full h-14 text-lg font-bold rounded-2xl transition-all duration-200 ${
-                    selectedLocation
-                      ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30"
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
-                >
-                  <MapPin className="w-5 h-5 mr-2" />
-                  Select My Location
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <GroceryIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Grocery
-                  </span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <PharmacyIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Pharmacy
-                  </span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <VeggiesIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Veggies
-                  </span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <ConstructionIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Hardware
-                  </span>
-                </div>
-              </div>
             </div>
 
-            {/* Desktop Layout */}
-            <div className="hidden sm:flex flex-col items-center text-center gap-6">
-              <header className="flex items-center gap-3 justify-center">
-                <AYTSLogo className="w-12 h-12" />
-                <span className="text-2xl font-extrabold text-primary tracking-tight">
-                  AYTS
-                </span>
-              </header>
+            <div className="w-full items-right">
+              <LocationSelector onOpen={() => setIsLocationModalOpen(true)} />
+            </div>
 
-              <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary">
-                  Local Marketplace
+            <div className="flex items-center justify-start sm:justify-end gap-3 overflow-x-auto">
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
+                  <GroceryIcon className="w-6 h-6" />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Grocery
                 </span>
               </div>
-
-              <h1 className="mt-5 text-4xl sm:text-5xl font-extrabold text-foreground leading-tight text-balance">
-                Welcome to <span className="text-primary">AYTS</span>
-              </h1>
-
-              <p className="mt-4 text-lg text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                Find local stores in your community
-              </p>
-
-              <div className="w-full flex flex-col items-center">
-                <div className="w-full flex justify-center">
-                  <LocationSelector
-                    onOpen={() => setIsLocationModalOpen(true)}
-                  />
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
+                  <PharmacyIcon className="w-6 h-6" />
                 </div>
-
-                <Button
-                  size="lg"
-                  onClick={handleSelectLocation}
-                  disabled={!selectedLocation}
-                  className={`mt-3 max-w-sm w-full h-14 text-lg font-bold rounded-2xl transition-all duration-200 ${
-                    selectedLocation
-                      ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30"
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
-                >
-                  <MapPin className="w-5 h-5 mr-2" />
-                  Select My Location
-                </Button>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Pharmacy
+                </span>
               </div>
-
-              <div className="flex items-center justify-center gap-4">
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <GroceryIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Grocery
-                  </span>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
+                  <VeggiesIcon className="w-6 h-6" />
                 </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <PharmacyIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Pharmacy
-                  </span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Veggies
+                </span>
+              </div>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center mb-1.5">
+                  <ConstructionIcon className="w-6 h-6" />
                 </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <VeggiesIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Veggies
-                  </span>
-                </div>
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <ConstructionIcon className="w-8 h-8" />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Hardware
-                  </span>
-                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Hardware
+                </span>
               </div>
             </div>
-          </motion.div>
-
-          {/* Compact Header - only visible when compact */}
+          </div>
         </div>
-      </motion.section>
+      </header>
 
-      <main
-        className={`min-h-screen bg-background relative overflow-hidden ${isCompact ? "pt-40" : ""}`}
-      >
+      <main className="min-h-screen bg-background relative overflow-hidden pt-24">
         {/* Background Illustrations */}
         <div className="absolute inset-0 pointer-events-none">
           <GroceryIcon className="absolute top-16 -left-8 w-32 h-32 opacity-60 rotate-[-15deg]" />
@@ -544,8 +274,8 @@ export default function LandingPage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 px-6 pb-16 pt-45 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-full">
-          <section className="mt-12">
+        <div className="relative z-10 px-6 pb-16 pt-24 max-w-[1600px] mx-auto flex flex-col items-center justify-center min-h-full">
+          <section className="mt-12 w-full">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">
               Browse Stores by Category
             </h2>
@@ -558,11 +288,11 @@ export default function LandingPage() {
                   </h3>
 
                   <div className="mt-4 -mx-6 px-6 overflow-x-auto">
-                    <div className="flex gap-4 min-w-max pb-2">
+                    <div className="flex gap-4 pb-2 overflow-x-auto scrollbar-hide">
                       {category.stores.map((store) => (
                         <div
                           key={store.id}
-                          className="w-56 rounded-2xl bg-background border border-border shadow-md shadow-foreground/5 overflow-hidden"
+                          className="w-64 rounded-2xl bg-background border border-border shadow-md shadow-foreground/5 overflow-hidden"
                         >
                           <div className="relative">
                             <img
